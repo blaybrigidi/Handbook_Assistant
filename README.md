@@ -87,7 +87,7 @@ HandBookBot/
 1. **Start the Backend Server**
 
    ```bash
-   python app.py
+   python main.py
    ```
 
    The API will be available at `http://localhost:5000`
@@ -95,7 +95,7 @@ HandBookBot/
 2. **Start the Frontend Development Server**
    ```bash
    cd frontend
-   npm start
+   npm run start
    ```
    The app will be available at `http://localhost:3000`
 
