@@ -99,6 +99,9 @@ HandBookBot/
    ```
    The app will be available at `http://localhost:3000`
 
+
+   # For the .env variables, feel free to reach me at brigidiablay@gmail.com
+
 ## 🎨 Design Features
 
 - **Gradient Themes**: Beautiful orange-to-red gradients matching Ashesi branding
