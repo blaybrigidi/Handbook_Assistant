@@ -4,17 +4,24 @@ from sentence_transformers import SentenceTransformer
 import numpy as np
 import os
 from dotenv import load_dotenv
-from typing import List, Dict, Tuple
+from typing import List, Dict, Tuple, Optional
 from anthropic import Anthropic
+import logging
 
-load_dotenv()
+# Load environment variables - try multiple paths
+env_path = os.path.join(os.path.dirname(__file__), '..', '.env')
+if not load_dotenv(env_path):
+    # Fallback to current directory
+    load_dotenv('.env')
+    # Also try parent of parent directory
+    load_dotenv('../.env')
 
-class AshesiRAGService:
+class RAGService:
     def __init__(self):
         self.model = SentenceTransformer('all-MiniLM-L6-v2')
-        self.data = None
-        self.embeddings = None
-        self.initialized = False
+        self.data = {}  # Store data per school
+        self.embeddings = {}  # Store embeddings per school
+        self.initialized_schools = set()
         
         # Initialize Claude
         self.claude_client = None
@@ -31,57 +38,72 @@ class AshesiRAGService:
                 user=os.getenv('SNOWFLAKE_USER'),
                 password=os.getenv('SNOWFLAKE_PASSWORD'),
                 account=os.getenv('SNOWFLAKE_ACCOUNT'),
-                warehouse='COMPUTE_WH',
-                database='ASHESI_HANDBOOK',
-                schema='PUBLIC'
+                warehouse=os.getenv('SNOWFLAKE_WAREHOUSE'),
+                database=os.getenv('SNOWFLAKE_DATABASE'),
+                schema=os.getenv('SNOWFLAKE_SCHEMA')
             )
             return conn
         except Exception as e:
             print(f"Connection failed: {e}")
             return None
     
-    def load_data(self):
+    def load_school_data(self, school_id: str):
+        """Load data for a specific school"""
         conn = self.connect_snowflake()
         if not conn:
             return False
             
         query = """
         SELECT 
-            SECTION_ID,
-            TITLE,
-            CATEGORY,
-            SUBCATEGORY,
-            CONTENT,
-            CONTENT_SUMMARY,
-            WORD_COUNT
-        FROM ASHESI_HANDBOOK_SECTIONS
-        WHERE WORD_COUNT > 50
-        ORDER BY WORD_COUNT DESC
+            hs.section_id,
+            hs.section_title,
+            hs.category,
+            hs.section_group,
+            hs.content,
+            hs.excerpt,
+            hs.topics,
+            hs.tags,
+            h.handbook_title,
+            h.academic_year,
+            s.school_name
+        FROM handbook_sections hs
+        JOIN handbooks h ON hs.handbook_id = h.handbook_id
+        JOIN schools s ON h.school_id = s.school_id
+        WHERE s.school_id = %(school_id)s
+        AND LENGTH(hs.content) > 50
+        ORDER BY LENGTH(hs.content) DESC
         """
         
         try:
-            self.data = pd.read_sql(query, conn)
+            school_data = pd.read_sql(query, conn, params={"school_id": school_id})
             conn.close()
             
-            self.data['searchable_text'] = (
-                self.data['TITLE'].fillna('') + ' ' + 
-                self.data['CONTENT'].fillna('')
+            if len(school_data) == 0:
+                print(f"No data found for school: {school_id}")
+                return False
+            
+            school_data['searchable_text'] = (
+                school_data['SECTION_TITLE'].fillna('') + ' ' + 
+                school_data['CONTENT'].fillna('') + ' ' +
+                school_data['CATEGORY'].fillna('')
             )
             
-            print(f"Loaded {len(self.data)} handbook sections!")
+            self.data[school_id] = school_data
+            print(f"Loaded {len(school_data)} handbook sections for {school_id}!")
             return True
         except Exception as e:
-            print(f"Failed to load data: {e}")
+            print(f"Failed to load data for {school_id}: {e}")
             return False
     
-    def create_embeddings(self):
-        if self.data is None:
+    def create_school_embeddings(self, school_id: str):
+        """Create embeddings for a specific school's data"""
+        if school_id not in self.data:
             return False
             
-        texts = self.data['searchable_text'].tolist()
-        print("Creating embeddings...")
-        self.embeddings = self.model.encode(texts)
-        print("Embeddings created successfully!")
+        texts = self.data[school_id]['searchable_text'].tolist()
+        print(f"Creating embeddings for {school_id}...")
+        self.embeddings[school_id] = self.model.encode(texts)
+        print(f"Embeddings created successfully for {school_id}!")
         return True
     
     def cosine_similarity(self, a, b):
@@ -93,76 +115,85 @@ class AshesiRAGService:
         # Calculate cosine similarity
         return np.dot(a_norm, b_norm.T)
     
-    def initialize(self):
-        if self.initialized:
+    def initialize_school(self, school_id: str):
+        """Initialize data and embeddings for a specific school"""
+        if school_id in self.initialized_schools:
             return True
             
-        if not self.load_data():
+        if not self.load_school_data(school_id):
             return False
             
-        if not self.create_embeddings():
+        if not self.create_school_embeddings(school_id):
             return False
             
-        self.initialized = True
-        print("RAG service initialized successfully!")
+        self.initialized_schools.add(school_id)
+        print(f"RAG service initialized successfully for {school_id}!")
         return True
     
-    def search(self, question: str, top_k: int = 3) -> List[Dict]:
-        if not self.initialized:
-            self.initialize()
+    def search(self, question: str, school_id: str, top_k: int = 3) -> List[Dict]:
+        """Search for relevant sections in a specific school's handbook"""
+        if not self.initialize_school(school_id):
+            return []
             
-        if self.embeddings is None:
+        if school_id not in self.embeddings:
             return []
             
         question_embedding = self.model.encode([question])
-        similarities = self.cosine_similarity(question_embedding, self.embeddings)[0]
+        similarities = self.cosine_similarity(question_embedding, self.embeddings[school_id])[0]
         top_indices = np.argsort(similarities)[-top_k:][::-1]
         
         results = []
+        school_data = self.data[school_id]
+        
         for idx in top_indices:
-            section = self.data.iloc[idx]
+            section = school_data.iloc[idx]
             results.append({
-                'title': section['TITLE'],
+                'title': section['SECTION_TITLE'],
                 'category': section['CATEGORY'],
                 'content': section['CONTENT'],
-                'summary': section['CONTENT_SUMMARY'],
+                'excerpt': section['EXCERPT'],
                 'similarity': float(similarities[idx]),
-                'section_id': section['SECTION_ID']
+                'section_id': section['SECTION_ID'],
+                'school_name': section['SCHOOL_NAME'],
+                'handbook_title': section['HANDBOOK_TITLE'],
+                'academic_year': section['ACADEMIC_YEAR']
             })
         
         return results
     
-    def generate_claude_response(self, question: str, results: List[Dict]) -> str:
+    def generate_claude_response(self, question: str, results: List[Dict], school_name: str) -> str:
         """Generate response using Claude AI"""
         if not self.claude_client:
-            return self.generate_fallback_response(question, results)
+            return self.generate_fallback_response(question, results, school_name)
         
         if not results:
-            return "I couldn't find relevant information in the student handbook for your question. You might want to:\n\n1. Contact the Student Affairs office directly\n2. Check the complete handbook on the university website\n3. Reach out to your academic advisor\n\nCould you try rephrasing your question with different keywords?"
+            return f"I couldn't find relevant information in the {school_name} handbook for your question. You might want to:\n\n1. Contact the Student Affairs office directly\n2. Check the complete handbook on the university website\n3. Reach out to your academic advisor\n\nCould you try rephrasing your question with different keywords?"
         
         # Build context from relevant sections
         context_parts = []
         for i, result in enumerate(results[:3], 1):
             context_parts.append(f"""
 Section {i}: "{result['title']}" (Category: {result['category']})
+From: {result['handbook_title']} ({result['academic_year']})
 Content: {result['content'][:800]}...
 """)
         
         context = "\n".join(context_parts)
         
         # Enhanced prompt for policy-specific responses
-        prompt = f"""You are HandBookBot, an AI assistant specifically designed to help Ashesi University students understand their student handbook and prevent Academic Judicial Committee (AJC) cases.
+        prompt = f"""You are HandBookBot, an AI assistant specifically designed to help {school_name} students understand their student handbook and university policies.
 
 IMPORTANT INSTRUCTIONS:
 1. Always cite exact sections when referencing policies
 2. Use the format: "According to the '[EXACT SECTION TITLE]' in the [CATEGORY] section..."
 3. If information isn't in the provided context, clearly state this limitation
-4. Focus on practical guidance to help students avoid policy violations
+4. Focus on practical guidance to help students follow university policies
 5. Be encouraging but emphasize the importance of following university policies
+6. Remember this is for {school_name} - tailor your response appropriately
 
 STUDENT QUESTION: {question}
 
-RELEVANT HANDBOOK SECTIONS:
+RELEVANT HANDBOOK SECTIONS FROM {school_name.upper()}:
 {context}
 
 Please provide a helpful, accurate response that:
@@ -170,6 +201,7 @@ Please provide a helpful, accurate response that:
 - Includes exact citations from the handbook sections provided
 - Offers practical advice to help the student comply with university policies
 - Maintains a supportive, educational tone
+- Is specific to {school_name}
 
 Response:"""
 
@@ -183,35 +215,60 @@ Response:"""
             return message.content[0].text
         except Exception as e:
             print(f"Claude API error: {e}")
-            return self.generate_fallback_response(question, results)
+            return self.generate_fallback_response(question, results, school_name)
     
-    def generate_fallback_response(self, question: str, results: List[Dict]) -> str:
+    def generate_fallback_response(self, question: str, results: List[Dict], school_name: str) -> str:
         """Fallback response when Claude is not available"""
         if not results:
-            return "I couldn't find relevant information in the handbook for your question."
+            return f"I couldn't find relevant information in the {school_name} handbook for your question."
         
-        response = f"Based on the Ashesi Student Handbook:\n\n"
+        response = f"Based on the {school_name} Student Handbook:\n\n"
         
         for i, result in enumerate(results[:2]):
             response += f"**{result['title']}** ({result['category']}):\n\n"
             response += f"📋 **Official Policy**: "
             
             # Include the actual policy text
-            content = result['summary'] if result['summary'] else result['content'][:400]
+            content = result['excerpt'] if result['excerpt'] else result['content'][:400]
             response += f"{content}\n\n"
             
             response += f"💡 **What this means**: This policy is designed to maintain academic standards and ensure fairness for all students.\n\n"
         
-        response += "For specific questions about how this applies to your situation, please contact the Dean of Students office for official guidance."
+        response += f"For specific questions about how this applies to your situation, please contact the {school_name} Student Affairs office for official guidance."
         return response
     
-    def chat(self, question: str) -> Tuple[str, List[Dict]]:
-        relevant_sections = self.search(question, top_k=3)
+    async def get_response(self, question: str, school_id: str) -> str:
+        """Main method to get a response for a question about a specific school's handbook"""
+        if not school_id:
+            return "Please specify which school you're asking about."
+        
+        relevant_sections = self.search(question, school_id, top_k=3)
+        
+        if not relevant_sections:
+            return f"I couldn't find relevant information for your question. The handbook for this school might not be available in our database yet."
+        
+        school_name = relevant_sections[0]['school_name'] if relevant_sections else "your school"
         
         # Use Claude for response generation if available, otherwise fallback
         if self.claude_client:
-            response = self.generate_claude_response(question, relevant_sections)
+            response = self.generate_claude_response(question, relevant_sections, school_name)
         else:
-            response = self.generate_fallback_response(question, relevant_sections)
+            response = self.generate_fallback_response(question, relevant_sections, school_name)
+            
+        return response
+    
+    def chat(self, question: str, school_id: str = None) -> Tuple[str, List[Dict]]:
+        """Legacy method for backwards compatibility"""
+        if not school_id:
+            return "Please specify which school you're asking about.", []
+            
+        relevant_sections = self.search(question, school_id, top_k=3)
+        school_name = relevant_sections[0]['school_name'] if relevant_sections else "your school"
+        
+        # Use Claude for response generation if available, otherwise fallback
+        if self.claude_client:
+            response = self.generate_claude_response(question, relevant_sections, school_name)
+        else:
+            response = self.generate_fallback_response(question, relevant_sections, school_name)
             
         return response, relevant_sections

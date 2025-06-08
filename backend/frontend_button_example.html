@@ -1,0 +1,361 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Multi-School Handbook Bot - Upload Example</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .section {
+            margin-bottom: 30px;
+            padding: 20px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        .section h3 {
+            color: #333;
+            margin-top: 0;
+        }
+        input, select, button {
+            padding: 10px;
+            margin: 5px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        button {
+            background-color: #007bff;
+            color: white;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        button:disabled {
+            background-color: #ccc;
+            cursor: not-allowed;
+        }
+        .progress-bar {
+            width: 100%;
+            height: 20px;
+            background-color: #f0f0f0;
+            border-radius: 10px;
+            overflow: hidden;
+            margin: 10px 0;
+        }
+        .progress-fill {
+            height: 100%;
+            background-color: #28a745;
+            width: 0%;
+            transition: width 0.3s ease;
+        }
+        .status-message {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 5px;
+        }
+        .status-processing {
+            background-color: #d1ecf1;
+            color: #0c5460;
+        }
+        .status-success {
+            background-color: #d4edda;
+            color: #155724;
+        }
+        .status-error {
+            background-color: #f8d7da;
+            color: #721c24;
+        }
+        .school-results {
+            max-height: 200px;
+            overflow-y: auto;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            margin-top: 10px;
+        }
+        .school-item {
+            padding: 10px;
+            border-bottom: 1px solid #eee;
+            cursor: pointer;
+        }
+        .school-item:hover {
+            background-color: #f8f9fa;
+        }
+        .upload-section {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎓 Multi-School Handbook Bot</h1>
+        <p>Upload and process handbook PDFs for any school</p>
+        
+        <!-- School Search Section -->
+        <div class="section">
+            <h3>1. Search for Your School</h3>
+            <input type="text" id="schoolSearch" placeholder="Type school name..." style="width: 300px;">
+            <button onclick="searchSchools()">🔍 Search Schools</button>
+            
+            <div id="schoolResults" class="school-results" style="display: none;"></div>
+            
+            <div style="margin-top: 15px;">
+                <p><strong>School not found?</strong></p>
+                <input type="text" id="newSchoolName" placeholder="School Name" style="width: 200px;">
+                <input type="text" id="newSchoolAbbr" placeholder="Abbreviation (optional)" style="width: 150px;">
+                <button onclick="addSchool()">➕ Add New School</button>
+            </div>
+        </div>
+        
+        <!-- Upload Section -->
+        <div class="section upload-section" id="uploadSection">
+            <h3>2. Upload Handbook</h3>
+            <p>Selected School: <strong id="selectedSchoolName">None</strong></p>
+            
+            <div style="margin-bottom: 15px;">
+                <label>Handbook Title:</label><br>
+                <input type="text" id="handbookTitle" placeholder="e.g., Student Handbook 2024-2025" style="width: 300px;">
+            </div>
+            
+            <div style="margin-bottom: 15px;">
+                <label>Academic Year:</label><br>
+                <input type="text" id="academicYear" placeholder="e.g., 2024-2025" style="width: 150px;">
+            </div>
+            
+            <div style="margin-bottom: 15px;">
+                <label>Upload PDF:</label><br>
+                <input type="file" id="pdfFile" accept=".pdf">
+            </div>
+            
+            <button onclick="uploadHandbook()" id="uploadBtn">📤 Upload & Process Handbook</button>
+            
+            <!-- Progress Section -->
+            <div id="progressSection" style="display: none;">
+                <h4>Processing Status:</h4>
+                <div class="progress-bar">
+                    <div class="progress-fill" id="progressFill"></div>
+                </div>
+                <div id="statusMessage" class="status-message"></div>
+            </div>
+        </div>
+        
+        <!-- Results Section -->
+        <div class="section" id="resultsSection" style="display: none;">
+            <h3>📊 Processing Results</h3>
+            <div id="results"></div>
+        </div>
+    </div>
+
+    <script>
+        let selectedSchool = null;
+        let currentJobId = null;
+        
+        const API_BASE = 'http://127.0.0.1:8000/api';
+        
+        async function searchSchools() {
+            const query = document.getElementById('schoolSearch').value.trim();
+            if (!query) return;
+            
+            try {
+                const response = await fetch(`${API_BASE}/search-schools`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ query: query })
+                });
+                
+                const data = await response.json();
+                displaySchoolResults(data.schools);
+            } catch (error) {
+                alert('Error searching schools: ' + error.message);
+            }
+        }
+        
+        function displaySchoolResults(schools) {
+            const resultsDiv = document.getElementById('schoolResults');
+            
+            if (schools.length === 0) {
+                resultsDiv.innerHTML = '<div class="school-item">No schools found</div>';
+            } else {
+                resultsDiv.innerHTML = schools.map(school => 
+                    `<div class="school-item" onclick="selectSchool('${school.school_id}', '${school.school_name}')">
+                        <strong>${school.school_name}</strong>
+                        ${school.school_abbreviation ? ` (${school.school_abbreviation})` : ''}
+                    </div>`
+                ).join('');
+            }
+            
+            resultsDiv.style.display = 'block';
+        }
+        
+        function selectSchool(schoolId, schoolName) {
+            selectedSchool = { id: schoolId, name: schoolName };
+            document.getElementById('selectedSchoolName').textContent = schoolName;
+            document.getElementById('uploadSection').style.display = 'block';
+            document.getElementById('schoolResults').style.display = 'none';
+        }
+        
+        async function addSchool() {
+            const schoolName = document.getElementById('newSchoolName').value.trim();
+            const schoolAbbr = document.getElementById('newSchoolAbbr').value.trim();
+            
+            if (!schoolName) {
+                alert('School name is required');
+                return;
+            }
+            
+            try {
+                const response = await fetch(`${API_BASE}/add-school`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        school_name: schoolName,
+                        school_abbreviation: schoolAbbr
+                    })
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    alert('School added successfully!');
+                    selectSchool(data.school_id, data.school_name);
+                    
+                    // Clear form
+                    document.getElementById('newSchoolName').value = '';
+                    document.getElementById('newSchoolAbbr').value = '';
+                } else {
+                    const error = await response.json();
+                    alert('Error adding school: ' + error.detail);
+                }
+            } catch (error) {
+                alert('Error adding school: ' + error.message);
+            }
+        }
+        
+        async function uploadHandbook() {
+            if (!selectedSchool) {
+                alert('Please select a school first');
+                return;
+            }
+            
+            const handbookTitle = document.getElementById('handbookTitle').value.trim();
+            const academicYear = document.getElementById('academicYear').value.trim();
+            const pdfFile = document.getElementById('pdfFile').files[0];
+            
+            if (!handbookTitle || !academicYear || !pdfFile) {
+                alert('Please fill in all fields and select a PDF file');
+                return;
+            }
+            
+            // Show progress section
+            document.getElementById('progressSection').style.display = 'block';
+            document.getElementById('uploadBtn').disabled = true;
+            
+            try {
+                // Create form data
+                const formData = new FormData();
+                formData.append('file', pdfFile);
+                formData.append('school_id', selectedSchool.id);
+                formData.append('handbook_title', handbookTitle);
+                formData.append('academic_year', academicYear);
+                
+                // Upload and start processing
+                const response = await fetch(`${API_BASE}/process-handbook`, {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    currentJobId = data.job_id;
+                    
+                    // Start polling for status
+                    pollProcessingStatus();
+                } else {
+                    const error = await response.json();
+                    showStatus('error', 'Upload failed: ' + error.detail);
+                }
+            } catch (error) {
+                showStatus('error', 'Upload failed: ' + error.message);
+            }
+        }
+        
+        async function pollProcessingStatus() {
+            if (!currentJobId) return;
+            
+            try {
+                const response = await fetch(`${API_BASE}/processing-status/${currentJobId}`);
+                if (response.ok) {
+                    const status = await response.json();
+                    updateProgress(status);
+                    
+                    // Continue polling if still processing
+                    if (status.status === 'processing') {
+                        setTimeout(pollProcessingStatus, 2000); // Poll every 2 seconds
+                    } else {
+                        document.getElementById('uploadBtn').disabled = false;
+                        if (status.status === 'completed') {
+                            showResults(status.result);
+                        }
+                    }
+                }
+            } catch (error) {
+                console.error('Error polling status:', error);
+                setTimeout(pollProcessingStatus, 5000); // Retry in 5 seconds
+            }
+        }
+        
+        function updateProgress(status) {
+            const progressFill = document.getElementById('progressFill');
+            const statusMessage = document.getElementById('statusMessage');
+            
+            if (status.progress >= 0) {
+                progressFill.style.width = `${status.progress}%`;
+            }
+            
+            statusMessage.className = `status-message status-${status.status}`;
+            statusMessage.textContent = status.message;
+        }
+        
+        function showStatus(type, message) {
+            const statusMessage = document.getElementById('statusMessage');
+            statusMessage.className = `status-message status-${type}`;
+            statusMessage.textContent = message;
+        }
+        
+        function showResults(result) {
+            const resultsSection = document.getElementById('resultsSection');
+            const resultsDiv = document.getElementById('results');
+            
+            resultsDiv.innerHTML = `
+                <div class="status-success">
+                    <h4>✅ Processing Completed Successfully!</h4>
+                    <p><strong>Handbook ID:</strong> ${result.handbook_id}</p>
+                    <p><strong>Sections Processed:</strong> ${result.sections_processed}</p>
+                    <p><strong>Total Pages:</strong> ${result.total_pages}</p>
+                    <p><strong>Message:</strong> ${result.message}</p>
+                </div>
+            `;
+            
+            resultsSection.style.display = 'block';
+        }
+        
+        // Allow enter key for search
+        document.getElementById('schoolSearch').addEventListener('keypress', function(event) {
+            if (event.key === 'Enter') {
+                searchSchools();
+            }
+        });
+    </script>
+</body>
+</html> 

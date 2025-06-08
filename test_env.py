@@ -1,0 +1,1 @@
+import os; import sys; sys.path.append(".."); from dotenv import load_dotenv; load_dotenv(os.path.join(os.path.dirname(__file__), "..", ".env")); print("Account:", os.getenv("SNOWFLAKE_ACCOUNT")); print("Database:", os.getenv("SNOWFLAKE_DATABASE"))

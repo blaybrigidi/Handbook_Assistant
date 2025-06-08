@@ -3,7 +3,7 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import { SparklesIcon } from '@heroicons/react/24/outline';
 
-const TypingIndicator = () => {
+const TypingIndicator = ({ schoolName = "Handbook" }) => {
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
@@ -35,7 +35,7 @@ const TypingIndicator = () => {
           transition={{ duration: 1.5, repeat: Infinity }}
         >
           <div className="flex items-center space-x-2">
-            <span className="text-gray-600 font-medium">Ashesi Assistant is thinking</span>
+            <span className="text-gray-600 font-medium">{schoolName} Assistant is thinking</span>
             <div className="flex space-x-1">
               {[...Array(3)].map((_, i) => (
                 <motion.div

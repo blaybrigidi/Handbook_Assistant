@@ -1,0 +1,142 @@
+# flyctl launch added from HandbookBot/.gitignore
+# Python
+HandbookBot/**/__pycache__
+HandbookBot/**/*.py[cod]
+HandbookBot/**/*$py.class
+HandbookBot/**/*.so
+HandbookBot/**/.Python
+HandbookBot/**/build
+HandbookBot/**/develop-eggs
+HandbookBot/**/dist
+HandbookBot/**/downloads
+HandbookBot/**/eggs
+HandbookBot/**/.eggs
+HandbookBot/**/lib
+HandbookBot/**/lib64
+HandbookBot/**/parts
+HandbookBot/**/sdist
+HandbookBot/**/var
+HandbookBot/**/wheels
+HandbookBot/**/*.egg-info
+HandbookBot/**/.installed.cfg
+HandbookBot/**/*.egg
+HandbookBot/**/MANIFEST
+HandbookBot/**/venv
+HandbookBot/**/env
+HandbookBot/**/ENV
+HandbookBot/**/.env
+HandbookBot/**/.venv
+
+# Node.js
+HandbookBot/**/node_modules
+HandbookBot/**/npm-debug.log*
+HandbookBot/**/yarn-debug.log*
+HandbookBot/**/yarn-error.log*
+HandbookBot/**/.npm
+HandbookBot/**/.node_repl_history
+
+# React/Build
+HandbookBot/**/build
+HandbookBot/**/.cache
+
+# IDE/Editor
+HandbookBot/**/.vscode
+HandbookBot/**/.idea
+HandbookBot/**/*.swp
+HandbookBot/**/*.swo
+HandbookBot/**/*~
+
+# OS
+HandbookBot/**/.DS_Store
+HandbookBot/**/.DS_Store?
+HandbookBot/**/._*
+HandbookBot/**/.Spotlight-V100
+HandbookBot/**/.Trashes
+HandbookBot/**/ehthumbs.db
+HandbookBot/**/Thumbs.db
+
+# Logs
+HandbookBot/**/logs
+HandbookBot/**/*.log
+
+# Runtime data
+HandbookBot/**/pids
+HandbookBot/**/*.pid
+HandbookBot/**/*.seed
+HandbookBot/**/*.pid.lock
+
+# Coverage directory used by tools like istanbul
+HandbookBot/**/coverage
+
+# nyc test coverage
+HandbookBot/**/.nyc_output
+
+# Optional npm cache directory
+HandbookBot/**/.npm
+
+# Optional eslint cache
+HandbookBot/**/.eslintcache
+
+# Optional REPL history
+HandbookBot/**/.node_repl_history
+
+# Output of 'npm pack'
+HandbookBot/**/*.tgz
+
+# Yarn Integrity file
+HandbookBot/**/.yarn-integrity
+
+# dotenv environment variables file
+HandbookBot/**/.env
+HandbookBot/**/.env.test
+
+# parcel-bundler cache (https://parceljs.org/)
+HandbookBot/**/.parcel-cache
+
+# next.js build output
+HandbookBot/**/.next
+
+# nuxt.js build output
+HandbookBot/**/.nuxt
+
+# vuepress build output
+HandbookBot/**/.vuepress/dist
+
+# Serverless directories
+HandbookBot/**/.serverless
+
+# FuseBox cache
+HandbookBot/**/.fusebox
+
+# DynamoDB Local files
+HandbookBot/**/.dynamodb/ 
+
+# flyctl launch added from HandbookBot/frontend/.gitignore
+# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
+
+# dependencies
+HandbookBot/frontend/node_modules
+HandbookBot/frontend/.pnp
+HandbookBot/frontend/**/.pnp.js
+
+# testing
+HandbookBot/frontend/coverage
+
+# production
+HandbookBot/frontend/build
+
+# misc
+HandbookBot/frontend/**/.DS_Store
+HandbookBot/frontend/**/.env.local
+HandbookBot/frontend/**/.env.development.local
+HandbookBot/frontend/**/.env.test.local
+HandbookBot/frontend/**/.env.production.local
+
+HandbookBot/frontend/**/npm-debug.log*
+HandbookBot/frontend/**/yarn-debug.log*
+HandbookBot/frontend/**/yarn-error.log*
+
+# flyctl launch added from HandbookBot/venv/.gitignore
+# Created by venv; see https://docs.python.org/3/library/venv.html
+HandbookBot/venv/**/*
+fly.toml

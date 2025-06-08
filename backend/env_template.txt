@@ -1,0 +1,23 @@
+# Snowflake Configuration Template
+# Copy this file to .env and fill in your actual values
+
+# Snowflake Connection Details
+SNOWFLAKE_USER=your_snowflake_username
+SNOWFLAKE_PASSWORD=your_snowflake_password
+SNOWFLAKE_ACCOUNT=your_account_identifier
+SNOWFLAKE_WAREHOUSE=your_warehouse_name
+SNOWFLAKE_DATABASE=your_database_name
+SNOWFLAKE_SCHEMA=your_schema_name
+
+# Anthropic API Configuration
+ANTHROPIC_API_KEY=your_anthropic_api_key
+
+# Example values:
+# SNOWFLAKE_USER=john.doe@university.edu
+# SNOWFLAKE_PASSWORD=your_secure_password
+# SNOWFLAKE_ACCOUNT=xy12345.us-east-1
+# SNOWFLAKE_WAREHOUSE=COMPUTE_WH
+# SNOWFLAKE_DATABASE=SCHOOL_HANDBOOK
+# SNOWFLAKE_SCHEMA=PUBLIC
+# ANTHROPIC_API_KEY=sk-ant-api03-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx 
+

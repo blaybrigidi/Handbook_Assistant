@@ -5,10 +5,11 @@ import {
   BookOpenIcon, 
   ShieldCheckIcon,
   AcademicCapIcon,
-  SparklesIcon
+  SparklesIcon,
+  ArrowRightIcon
 } from '@heroicons/react/24/outline';
 
-const Hero = ({ onStartChat }) => {
+const Hero = ({ onStartJourney }) => {
   const features = [
     {
       icon: BookOpenIcon,
@@ -18,13 +19,13 @@ const Hero = ({ onStartChat }) => {
     },
     {
       icon: ShieldCheckIcon,
-      title: "Student Conduct",
+      title: "Student Conduct", 
       description: "Understand student conduct expectations, disciplinary procedures, and campus safety.",
       gradient: "from-purple-500 to-pink-500"
     },
     {
       icon: ChatBubbleBottomCenterTextIcon,
-      title: "Housing & Services",
+      title: "University Services",
       description: "Find information about housing policies, university services, and financial procedures.",
       gradient: "from-orange-500 to-red-500"
     }
@@ -72,33 +73,44 @@ const Hero = ({ onStartChat }) => {
           
           <h1 className="text-6xl md:text-7xl font-bold text-gray-900 mb-6 leading-tight">
             Your{' '}
-            <span className="gradient-text">
-              Ashesi
+            <span className="bg-gradient-to-r from-orange-600 to-red-600 bg-clip-text text-transparent">
+              University
             </span>{' '}
             <br />
-            Assistant
+            <span className="bg-gradient-to-r from-red-600 to-pink-600 bg-clip-text text-transparent">
+              Assistant
+            </span>
           </h1>
           
           <p className="text-xl md:text-2xl text-gray-600 mb-12 max-w-3xl mx-auto leading-relaxed">
-            Get instant, accurate answers from the Ashesi Student Handbook. 
-            Ask me anything about policies, procedures, and university life.
+            Get instant, accurate answers from your student handbook. 
+            Ask me anything about policies, procedures, and university life at your school.
           </p>
 
           <motion.button
-            onClick={onStartChat}
-            className="group relative bg-gradient-to-r from-orange-500 to-red-500 text-white px-12 py-4 rounded-2xl text-lg font-semibold shadow-xl hover:shadow-2xl transition-all duration-300 overflow-hidden"
+            onClick={onStartJourney}
+            className="group relative bg-gradient-to-r from-orange-500 via-red-500 to-pink-500 text-white px-12 py-4 rounded-2xl text-lg font-semibold shadow-xl hover:shadow-2xl transition-all duration-300 overflow-hidden"
             whileHover={{ scale: 1.05, y: -2 }}
             whileTap={{ scale: 0.98 }}
           >
             <span className="relative z-10 flex items-center space-x-2">
-              <ChatBubbleBottomCenterTextIcon className="h-5 w-5" />
-              <span>Start Chatting</span>
+              <span>Start Your Journey</span>
+              <ArrowRightIcon className="h-5 w-5 group-hover:translate-x-1 transition-transform duration-200" />
             </span>
             <motion.div
-              className="absolute inset-0 bg-gradient-to-r from-red-500 to-orange-500 opacity-0 group-hover:opacity-100 transition-opacity duration-300"
+              className="absolute inset-0 bg-gradient-to-r from-red-500 via-pink-500 to-orange-500 opacity-0 group-hover:opacity-100 transition-opacity duration-300"
               layoutId="button-bg"
             />
           </motion.button>
+
+          <motion.div 
+            className="mt-8 text-sm text-gray-500"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 1, duration: 0.6 }}
+          >
+            <p>🎓 Find your school or upload your handbook to get started</p>
+          </motion.div>
         </motion.div>
 
         <motion.div 
